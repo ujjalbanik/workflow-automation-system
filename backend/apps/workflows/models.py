@@ -40,8 +40,9 @@ class Workflow(models.Model):
 
 class WorkflowStep(models.Model):
     class StepType(models.TextChoices):
-        CONDITION = "CONDITION", "Condition"
-        ACTION = "ACTION", "Action"
+        EMAIL = "EMAIL", "Email"
+        HTTP_REQUEST = "HTTP_REQUEST", "HTTP Request"
+        WAIT = "WAIT", "Wait"
 
     id = models.UUIDField(
         primary_key=True,
@@ -53,6 +54,11 @@ class WorkflowStep(models.Model):
         Workflow,
         on_delete=models.CASCADE,
         related_name="steps",
+    )
+    
+    description = models.TextField(
+        blank=True,
+        null=True,
     )
 
     order = models.PositiveIntegerField()

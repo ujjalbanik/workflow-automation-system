@@ -1,10 +1,12 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
-from apps.workflows.models import Workflow, WorkflowStep
+
+from apps.workflows.models import Workflow
 
 
-class WorkflowRun(models.Model):
+class WorkflowExecution(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         RUNNING = "RUNNING", "Running"
@@ -20,7 +22,12 @@ class WorkflowRun(models.Model):
     workflow = models.ForeignKey(
         Workflow,
         on_delete=models.CASCADE,
-        related_name="runs",
+        related_name="executions",
+    )
+
+    started_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
     )
 
     status = models.CharField(
@@ -31,7 +38,7 @@ class WorkflowRun(models.Model):
 
     started_at = models.DateTimeField(auto_now_add=True)
 
-    completed_at = models.DateTimeField(
+    finished_at = models.DateTimeField(
         null=True,
         blank=True,
     )
@@ -41,53 +48,8 @@ class WorkflowRun(models.Model):
         null=True,
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ["-started_at"]
 
     def __str__(self):
         return f"{self.workflow.name} ({self.status})"
-
-class ExecutionLog(models.Model):
-    class Status(models.TextChoices):
-        SUCCESS = "SUCCESS", "Success"
-        FAILED = "FAILED", "Failed"
-        SKIPPED = "SKIPPED", "Skipped"
-
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-    )
-
-    workflow_run = models.ForeignKey(
-        WorkflowRun,
-        on_delete=models.CASCADE,
-        related_name="logs",
-    )
-
-    workflow_step = models.ForeignKey(
-        WorkflowStep,
-        on_delete=models.CASCADE,
-    )
-
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-    )
-
-    execution_time_ms = models.PositiveIntegerField(default=0)
-
-    message = models.TextField(
-        blank=True,
-        null=True,
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["created_at"]
-
-    def __str__(self):
-        return f"{self.workflow_step.name} - {self.status}"
