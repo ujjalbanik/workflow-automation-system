@@ -1,44 +1,30 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
+import PageTransition from "../components/PageTransition";
 
 export default function MainLayout() {
+  const location = useLocation();
+
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        background: "#f5f7fb",
-      }}
-    >
+    <div className="flex min-h-screen bg-slate-100">
       <Sidebar />
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <div className="flex flex-1 flex-col">
         <Navbar />
 
-        <div
-          style={{
-            padding: 30,
-            maxWidth: "1200px",
-            width: "100%",
-            margin: "0 auto",
-            boxSizing: "border-box",
-          }}
-        >
-          <Outlet />
+        <main className="mx-auto w-full max-w-7xl flex-1 p-6 lg:p-8">
+          <AnimatePresence mode="wait">
+            <PageTransition key={location.pathname}>
+              <Outlet />
+            </PageTransition>
+          </AnimatePresence>
+        </main>
 
-          <div style={{ marginTop: "auto" }}>
-            <Footer />
-          </div>
-        </div>
+        <Footer />
       </div>
     </div>
   );

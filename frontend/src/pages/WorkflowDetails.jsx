@@ -1,6 +1,18 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { useNavigate, useParams, Link } from "react-router-dom";
+
+import {
+  Workflow,
+  Play,
+  Pencil,
+  Trash2,
+  Calendar,
+  ListChecks,
+  Activity,
+} from "lucide-react";
+
 import AddStepModal from "../components/AddStepModal";
 
 import {
@@ -24,25 +36,16 @@ export default function WorkflowDetails() {
   }, []);
 
   const load = async () => {
-    try {
-      const workflowData = await getWorkflow(id);
-      const stepsData = await getWorkflowSteps(id);
+    const workflowData = await getWorkflow(id);
+    const stepsData = await getWorkflowSteps(id);
 
-      setWorkflow(workflowData);
-      setSteps(stepsData);
-    } catch (err) {
-      console.error(err);
-    }
+    setWorkflow(workflowData);
+    setSteps(stepsData);
   };
 
   const handleExecute = async () => {
-    try {
-      await executeWorkflow(id);
-      toast.success("Workflow execution started");
-    } catch (err) {
-      console.error(err);
-      toast.error("Execution failed");
-    }
+    await executeWorkflow(id);
+    toast.success("Workflow execution started");
   };
 
   const removeWorkflow = async () => {
@@ -65,315 +68,214 @@ export default function WorkflowDetails() {
     load();
   };
 
-  if (!workflow) {
-    return <h2>Loading...</h2>;
-  }
+  if (!workflow) return <div>Loading...</div>;
 
   return (
-    <div>
-      {/* Workflow Info */}
-
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 18,
-          padding: 30,
-          marginBottom: 30,
-          boxShadow: "0 8px 25px rgba(0,0,0,.08)",
-        }}
+    <div className="space-y-8">
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-3xl bg-white p-8 shadow-xl"
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 20,
-          }}
-        >
+        <div className="flex flex-col justify-between gap-6 lg:flex-row">
           <div>
-            <h1 style={{ margin: 0, fontSize: 30 }}>
-              📋 {workflow?.name || "Workflow"}
-            </h1>
+            <div className="mb-5 flex items-center gap-4">
+              <div className="rounded-2xl bg-blue-100 p-4">
+                <Workflow size={32} className="text-blue-600" />
+              </div>
 
-            <p
-              style={{
-                marginTop: 12,
-                color: "#666",
-                fontSize: 16,
-              }}
-            >
-              {workflow?.description || "No description provided."}
-            </p>
+              <div>
+                <h1 className="text-3xl font-bold text-slate-800">
+                  {workflow.name}
+                </h1>
+
+                <p className="mt-2 text-slate-500">
+                  {workflow.description || "No description provided."}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div
-            style={{
-              padding: "10px 18px",
-              borderRadius: 999,
-              background: workflow?.status === "ACTIVE" ? "#dcfce7" : "#fef3c7",
-              color: workflow?.status === "ACTIVE" ? "#15803d" : "#92400e",
-              fontWeight: 700,
-            }}
+          <span
+            className={`h-fit rounded-full px-4 py-2 text-sm font-semibold ${
+              workflow.status === "ACTIVE"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
           >
-            {workflow?.status || "Unknown"}
-          </div>
+            {workflow.status}
+          </span>
         </div>
 
-        <hr style={{ margin: "25px 0" }} />
+        <div className="my-8 grid gap-6 md:grid-cols-3">
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <ListChecks className="mb-3 text-blue-600" />
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 20,
-            marginBottom: 25,
-          }}
-        >
-          <div>
-            <div style={{ color: "#888" }}>Total Steps</div>
-            <h2>{steps?.length || 0}</h2>
+            <p className="text-sm text-slate-500">Total Steps</p>
+
+            <h2 className="mt-2 text-3xl font-bold">{steps.length}</h2>
           </div>
 
-          <div>
-            <div style={{ color: "#888" }}>Workflow Status</div>
-            <h2>{workflow?.status || "Unknown"}</h2>
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <Activity className="mb-3 text-green-600" />
+
+            <p className="text-sm text-slate-500">Status</p>
+
+            <h2 className="mt-2 text-3xl font-bold">{workflow.status}</h2>
           </div>
 
-          <div>
-            <div style={{ color: "#888" }}>Created</div>
-            <h2>
-              {workflow?.created_at
+          <div className="rounded-2xl bg-slate-50 p-5">
+            <Calendar className="mb-3 text-orange-500" />
+
+            <p className="text-sm text-slate-500">Created</p>
+
+            <h2 className="mt-2 text-lg font-bold">
+              {workflow.created_at
                 ? new Date(workflow.created_at).toLocaleDateString()
                 : "-"}
             </h2>
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 15,
-            flexWrap: "wrap",
-          }}
-        >
-          <button onClick={handleExecute}>▶ Execute Workflow</button>
+        <div className="flex flex-wrap gap-4">
+          <button
+            onClick={handleExecute}
+            className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 font-semibold text-white hover:bg-green-700"
+          >
+            <Play size={18} />
+            Execute
+          </button>
 
-          <button>✏ Edit Workflow</button>
+          <Link
+            to={`/workflows/${id}/edit`}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
+          >
+            <Pencil size={18} />
+            Edit
+          </Link>
 
           <button
             onClick={removeWorkflow}
-            style={{
-              background: "#ef4444",
-              color: "#fff",
-            }}
+            className="flex items-center gap-2 rounded-xl bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-700"
           >
-            🗑 Delete Workflow
+            <Trash2 size={18} />
+            Delete
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Steps */}
 
-      <div
-        style={{
-          background: "#fff",
-          padding: "25px",
-          borderRadius: "10px",
-          boxShadow: "0 2px 8px rgba(0,0,0,.08)",
-        }}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-3xl bg-white p-8 shadow-xl"
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <h2>Workflow Steps</h2>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">
+              Workflow Steps
+            </h2>
+
+            <p className="mt-2 text-slate-500">
+              Configure and manage execution steps.
+            </p>
+          </div>
 
           <button
             onClick={() => setShowModal(true)}
-            style={{
-              padding: "10px 18px",
-              background: "#16a34a",
-              color: "#fff",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-            }}
+            className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
           >
             + Add Step
           </button>
         </div>
 
         {steps.length === 0 ? (
-          <p>No steps added yet.</p>
+          <div className="rounded-2xl border-2 border-dashed border-slate-300 p-16 text-center">
+            <Workflow size={60} className="mx-auto mb-5 text-slate-400" />
+
+            <h3 className="text-2xl font-semibold text-slate-700">
+              No Steps Added
+            </h3>
+
+            <p className="mt-2 text-slate-500">Add your first workflow step.</p>
+          </div>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 28,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                marginBottom: 10,
-              }}
-            >
-              <div className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold shadow">
-                🚀 Trigger
-              </div>
-            </div>
-            {steps.map((step) => (
-              <div key={step.id}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    margin: "8px 0",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 3,
-                      height: 42,
-                      background: "#cbd5e1",
-                      borderRadius: 20,
-                    }}
-                  ></div>
-                </div>
+          <div className="relative">
+            <div className="absolute left-8 top-0 h-full w-1 rounded-full bg-slate-200" />
 
-                <div
-                  style={{
-                    width: "100%",
-                    maxWidth: "900px",
-                    margin: "0 auto",
-                    background: "#fff",
-                    borderRadius: 18,
-                    padding: 24,
-                    boxShadow: "0 8px 20px rgba(0,0,0,.08)",
-                    boxSizing: "border-box",
+            <div className="space-y-8">
+              {steps.map((step, index) => (
+                <motion.div
+                  key={step.id}
+                  initial={{
+                    opacity: 0,
+                    x: -20,
                   }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                  }}
+                  transition={{
+                    delay: index * 0.08,
+                  }}
+                  className="relative ml-5"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      gap: 20,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div>
-                      <h2 className="text-xl font-bold">
-                        {step.step_type === "EMAIL" && "📧"}
-                        {step.step_type === "WAIT" && "⏱"}
-                        {step.step_type === "HTTP_REQUEST" && "🌐"} {step.name}
-                      </h2>
+                  <div className="absolute -left-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 font-bold text-white shadow-lg">
+                    {index + 1}
+                  </div>
 
-                      <p className="text-gray-500">{step.description}</p>
+                  <div className="ml-12 rounded-3xl border border-slate-200 bg-slate-50 p-6 transition hover:shadow-lg">
+                    <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800">
+                          {step.name}
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                          {step.step_type}
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                        Step {index + 1}
+                      </span>
                     </div>
 
-                    <span className="bg-gray-200 rounded-full px-4 py-1 h-fit">
-                      #{step.order}
-                    </span>
+                    <p className="leading-7 text-slate-600">
+                      {step.description || "No description available."}
+                    </p>
+
+                    <div className="mt-6 flex flex-wrap gap-3">
+                      <Link to={`/workflows/${id}/steps/${step.id}/edit`}>
+                        <button className="rounded-xl bg-blue-600 px-5 py-2 font-semibold text-white transition hover:bg-blue-700">
+                          Edit
+                        </button>
+                      </Link>
+
+                      <button
+                        onClick={() => removeStep(step.id)}
+                        className="rounded-xl bg-red-600 px-5 py-2 font-semibold text-white transition hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-
-                  <div
-                    style={{
-                      marginTop: 20,
-                      background: "#f8fafc",
-                      borderRadius: 12,
-                      padding: 16,
-                    }}
-                  >
-                    {step.step_type === "EMAIL" && (
-                      <>
-                        <p>👤 Recipient : {step.configuration.to}</p>
-                        <p>📨 Subject : {step.configuration.subject}</p>
-                      </>
-                    )}
-
-                    {step.step_type === "WAIT" && (
-                      <p>⏱ Wait : {step.configuration.seconds} seconds</p>
-                    )}
-
-                    {step.step_type === "HTTP_REQUEST" && (
-                      <>
-                        <p>🌐 {step.configuration.method}</p>
-                        <p>🔗 {step.configuration.url}</p>
-                      </>
-                    )}
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 12,
-                      flexWrap: "wrap",
-                      marginTop: 20,
-                    }}
-                  >
-                    <Link
-                      to={`/workflows/${id}/steps/${step.id}/edit`}
-                      className="bg-yellow-500 text-white px-4 py-2 rounded"
-                    >
-                      ✏ Edit
-                    </Link>
-
-                    <button
-                      onClick={() => removeStep(step.id)}
-                      className="bg-red-600 text-white px-4 py-2 rounded"
-                    >
-                      🗑 Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                margin: "8px 0",
-              }}
-            >
-              <div
-                style={{
-                  width: 3,
-                  height: 42,
-                  background: "#cbd5e1",
-                  borderRadius: 20,
-                }}
-              ></div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
-              <div className="bg-green-600 text-white px-6 py-3 rounded-xl font-bold shadow">
-                ✅ End
-              </div>
+                </motion.div>
+              ))}
             </div>
           </div>
         )}
-      </div>
-
+      </motion.div>
       {showModal && (
         <AddStepModal
           workflowId={id}
           onClose={() => setShowModal(false)}
-          onSuccess={load}
+          onSuccess={() => {
+            setShowModal(false);
+            load();
+          }}
         />
       )}
     </div>

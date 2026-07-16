@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Activity, CheckCircle2, Clock3, XCircle, Eye } from "lucide-react";
+
 import { getExecutions } from "../services/execution";
 import Loader from "../components/Loader";
 
 export default function Executions() {
   const navigate = useNavigate();
+
   const [executions, setExecutions] = useState(null);
 
   useEffect(() => {
@@ -22,92 +26,135 @@ export default function Executions() {
 
   if (!executions) return <Loader />;
 
+  const success = executions.filter((e) => e.status === "SUCCESS").length;
+
+  const failed = executions.filter((e) => e.status === "FAILED").length;
+
+  const running = executions.filter(
+    (e) => e.status !== "SUCCESS" && e.status !== "FAILED",
+  ).length;
+
   return (
-    <div>
-      <h1 style={{ marginBottom: 20 }}>Execution History</h1>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-8"
+    >
+      {/* Hero */}
 
-      <table
-        style={{
-          width: "100%",
-          background: "#fff",
-          borderCollapse: "collapse",
-          borderRadius: 10,
-          overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        }}
-      >
-        <thead
-          style={{
-            background: "#1e3a8a",
-            color: "#fff",
-          }}
-        >
-          <tr>
-            <th style={{ padding: 14, textAlign: "left" }}>Workflow ID</th>
-            <th style={{ padding: 14, textAlign: "left" }}>Status</th>
-            <th style={{ padding: 14, textAlign: "left" }}>Started</th>
-            <th style={{ padding: 14, textAlign: "left" }}>Finished</th>
-            <th style={{ padding: 14, textAlign: "left" }}>Actions</th>
-          </tr>
-        </thead>
+      <div className="rounded-3xl bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 p-8 text-white shadow-2xl">
+        <div className="flex items-center gap-5">
+          <div className="rounded-2xl bg-white/20 p-4">
+            <Activity size={36} />
+          </div>
 
-        <tbody>
-          {executions.map((execution) => (
-            <tr
-              key={execution.id}
-              style={{
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <td style={{ padding: 14 }}>
-                {execution.workflow.slice(0, 8)}...
-              </td>
+          <div>
+            <h1 className="text-3xl font-bold">Execution History</h1>
 
-              <td
-                style={{
-                  padding: 14,
-                  color:
+            <p className="mt-2 text-blue-100">
+              Monitor every workflow execution in one place.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="rounded-3xl bg-white p-6 shadow-lg">
+          <CheckCircle2 size={32} className="mb-3 text-green-600" />
+
+          <p className="text-slate-500">Successful</p>
+
+          <h2 className="mt-2 text-3xl font-bold">{success}</h2>
+        </div>
+
+        <div className="rounded-3xl bg-white p-6 shadow-lg">
+          <XCircle size={32} className="mb-3 text-red-600" />
+
+          <p className="text-slate-500">Failed</p>
+
+          <h2 className="mt-2 text-3xl font-bold">{failed}</h2>
+        </div>
+
+        <div className="rounded-3xl bg-white p-6 shadow-lg">
+          <Clock3 size={32} className="mb-3 text-orange-500" />
+
+          <p className="text-slate-500">Running</p>
+
+          <h2 className="mt-2 text-3xl font-bold">{running}</h2>
+        </div>
+      </div>
+
+      {/* Executions */}
+
+      <div className="space-y-5">
+        {executions.map((execution, index) => (
+          <motion.div
+            key={execution.id}
+            initial={{
+              opacity: 0,
+              y: 25,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              delay: index * 0.06,
+            }}
+            whileHover={{
+              y: -4,
+            }}
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg"
+          >
+            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Workflow</h2>
+
+                <p className="mt-1 font-mono text-sm text-slate-500">
+                  {execution.workflow}
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-5 text-sm text-slate-500">
+                  <span>
+                    Started: {new Date(execution.started_at).toLocaleString()}
+                  </span>
+
+                  <span>
+                    Finished:{" "}
+                    {execution.finished_at
+                      ? new Date(execution.finished_at).toLocaleString()
+                      : "-"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <span
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
                     execution.status === "SUCCESS"
-                      ? "green"
+                      ? "bg-green-100 text-green-700"
                       : execution.status === "FAILED"
-                      ? "red"
-                      : "#f59e0b",
-                  fontWeight: "bold",
-                }}
-              >
-                {execution.status}
-              </td>
+                        ? "bg-red-100 text-red-700"
+                        : "bg-yellow-100 text-yellow-700"
+                  }`}
+                >
+                  {execution.status}
+                </span>
 
-              <td style={{ padding: 14 }}>
-                {new Date(execution.started_at).toLocaleString()}
-              </td>
-
-              <td style={{ padding: 14 }}>
-                {execution.finished_at
-                  ? new Date(execution.finished_at).toLocaleString()
-                  : "-"}
-              </td>
-
-              <td style={{ padding: 14 }}>
                 <button
                   onClick={() => navigate(`/executions/${execution.id}`)}
-                  style={{
-                    padding: "8px 14px",
-                    background: "#2563eb",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                  }}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
                 >
-                  View Details
+                  <Eye size={18} />
+                  Details
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
   );
 }

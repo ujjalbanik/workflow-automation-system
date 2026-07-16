@@ -1,79 +1,110 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  LayoutDashboard,
+  Workflow,
+  PlusCircle,
+  PlayCircle,
+  Sparkles,
+} from "lucide-react";
 
-const linkStyle={
-color:"#fff",
-textDecoration:"none",
-padding:"12px 15px",
-borderRadius:10,
-background:"rgba(255,255,255,.05)",
-transition:".25s",
-};
+const menuItems = [
+  {
+    name: "Dashboard",
+    path: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "Workflows",
+    path: "/workflows",
+    icon: Workflow,
+  },
+  {
+    name: "Create Workflow",
+    path: "/workflows/create",
+    icon: PlusCircle,
+  },
+  {
+    name: "Executions",
+    path: "/executions",
+    icon: PlayCircle,
+  },
+];
 
 export default function Sidebar() {
   return (
-    <div
-      style={{
-        width: 250,
-        background: "#111827",
-        color: "#fff",
-        padding: 25,
-      }}
-    >
-      <h2>⚙ Menu</h2>
+    <aside className="sticky top-0 flex h-screen w-72 flex-col border-r border-slate-800 bg-slate-950 text-white shadow-2xl">
+      {/* Logo */}
 
-      <hr
-        style={{
-          borderColor: "#333",
-          margin: "20px 0",
-        }}
-      />
+      <div className="border-b border-slate-800 p-8">
+        <motion.div
+          whileHover={{
+            rotate: -5,
+            scale: 1.05,
+          }}
+          className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg"
+        >
+          <Sparkles size={28} />
+        </motion.div>
 
-      <div
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-    marginTop: 30,
-  }}
->
+        <h1 className="text-2xl font-bold">Workflow</h1>
 
-<Link
-to="/dashboard"
-style={linkStyle}
->
+        <p className="mt-1 text-sm text-slate-400">Automation Platform</p>
+      </div>
 
-📊 Dashboard
+      {/* Navigation */}
 
-</Link>
+      <nav className="flex-1 space-y-2 p-5">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
 
-<Link
-to="/workflows"
-style={linkStyle}
->
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `group flex items-center gap-4 rounded-xl px-4 py-3 transition-all duration-300 ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-lg"
+                    : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Icon
+                      size={20}
+                      className={
+                        isActive
+                          ? "text-white"
+                          : "text-slate-400 group-hover:text-blue-400"
+                      }
+                    />
+                  </motion.div>
 
-📋 Workflows
+                  <span className="font-medium">{item.name}</span>
+                </>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
 
-</Link>
+      {/* Footer */}
 
-<Link
-to="/workflows/create"
-style={linkStyle}
->
+      <div className="border-t border-slate-800 p-6">
+        <div className="rounded-xl bg-slate-900 p-4">
+          <p className="text-sm font-semibold">Workflow Automation</p>
 
-➕ Create Workflow
-
-</Link>
-
-<Link
-to="/executions"
-style={linkStyle}
->
-
-⚙ Executions
-
-</Link>
-
-</div>
-    </div>
+          <p className="mt-1 text-xs text-slate-400">
+            Build • Execute • Monitor
+          </p>
+        </div>
+      </div>
+    </aside>
   );
 }

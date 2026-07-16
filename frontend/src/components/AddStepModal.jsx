@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { Mail, Clock3, Globe, FileText, Hash, Save, X } from "lucide-react";
+
 import { createWorkflowStep } from "../services/workflow";
 
 export default function AddStepModal({ workflowId, onClose, onSuccess }) {
@@ -9,13 +12,10 @@ export default function AddStepModal({ workflowId, onClose, onSuccess }) {
     order: 1,
     name: "",
     description: "",
-
     to: "",
     subject: "",
     message: "",
-
     seconds: 5,
-
     method: "GET",
     url: "",
     body: "",
@@ -47,16 +47,11 @@ export default function AddStepModal({ workflowId, onClose, onSuccess }) {
 
       if (type === "WAIT") {
         configuration = {
-          seconds: Number(form.seconds || 5),
+          seconds: Number(form.seconds),
         };
       }
 
       if (type === "HTTP_REQUEST") {
-        if (!form.url.trim()) {
-          toast.error("Enter URL");
-          return;
-        }
-
         configuration = {
           method: form.method,
           url: form.url,
@@ -71,8 +66,9 @@ export default function AddStepModal({ workflowId, onClose, onSuccess }) {
         step_type: type,
         configuration,
       });
-      
+
       toast.success("Step added successfully");
+
       onSuccess();
       onClose();
     } catch (err) {
@@ -82,128 +78,159 @@ export default function AddStepModal({ workflowId, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-      <form
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <motion.form
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
         onSubmit={save}
-        className="bg-white rounded-xl w-[650px] p-8 space-y-4"
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl"
       >
-        <h1 className="text-2xl font-bold">Add Workflow Step</h1>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Add Workflow Step</h1>
 
-        <input
-          className="border p-3 rounded w-full"
-          placeholder="Step Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
+            <p className="mt-2 text-slate-500">
+              Configure the next automation step.
+            </p>
+          </div>
 
-        <textarea
-          className="border p-3 rounded w-full"
-          placeholder="Description"
-          rows={3}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-        />
-
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            className="border p-3 rounded"
-            type="number"
-            placeholder="Order"
-            value={form.order}
-            onChange={(e) => setForm({ ...form, order: e.target.value })}
-          />
-
-          <select
-            className="border p-3 rounded"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-          >
-            <option value="EMAIL">📧 Email</option>
-            <option value="WAIT">⏱ Wait</option>
-            <option value="HTTP_REQUEST">🌐 HTTP Request</option>
-          </select>
-        </div>
-
-        {type === "EMAIL" && (
-          <>
-            <input
-              className="border p-3 rounded w-full"
-              placeholder="Recipient Email"
-              value={form.to}
-              onChange={(e) => setForm({ ...form, to: e.target.value })}
-            />
-
-            <input
-              className="border p-3 rounded w-full"
-              placeholder="Subject"
-              value={form.subject}
-              onChange={(e) => setForm({ ...form, subject: e.target.value })}
-            />
-
-            <textarea
-              className="border p-3 rounded w-full"
-              rows={5}
-              placeholder="Message"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-            />
-          </>
-        )}
-
-        {type === "WAIT" && (
-          <input
-            className="border p-3 rounded w-full"
-            type="number"
-            placeholder="Seconds"
-            value={form.seconds}
-            onChange={(e) => setForm({ ...form, seconds: e.target.value })}
-          />
-        )}
-
-        {type === "HTTP_REQUEST" && (
-          <>
-            <select
-              className="border p-3 rounded"
-              value={form.method}
-              onChange={(e) => setForm({ ...form, method: e.target.value })}
-            >
-              <option>GET</option>
-              <option>POST</option>
-              <option>PUT</option>
-              <option>DELETE</option>
-            </select>
-
-            <input
-              className="border p-3 rounded w-full"
-              placeholder="URL"
-              value={form.url}
-              onChange={(e) => setForm({ ...form, url: e.target.value })}
-            />
-
-            <textarea
-              className="border p-3 rounded w-full"
-              rows={5}
-              placeholder='{"name":"Ujjal"}'
-              value={form.body}
-              onChange={(e) => setForm({ ...form, body: e.target.value })}
-            />
-          </>
-        )}
-
-        <div className="flex gap-3 justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="border px-5 py-2 rounded"
+            className="rounded-xl p-2 hover:bg-slate-100"
+          >
+            <X />
+          </button>
+        </div>
+
+        <div className="space-y-5">
+          <input
+            placeholder="Step Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="w-full rounded-xl border border-slate-200 p-3"
+          />
+
+          <textarea
+            rows={3}
+            placeholder="Description"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            className="w-full rounded-xl border border-slate-200 p-3"
+          />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block font-semibold">
+                <Hash className="mr-2 inline" size={16} />
+                Order
+              </label>
+
+              <input
+                type="number"
+                value={form.order}
+                onChange={(e) => setForm({ ...form, order: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block font-semibold">Step Type</label>
+
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              >
+                <option value="EMAIL">Email</option>
+                <option value="WAIT">Wait</option>
+                <option value="HTTP_REQUEST">HTTP Request</option>
+              </select>
+            </div>
+          </div>
+
+          {type === "EMAIL" && (
+            <div className="space-y-4">
+              <input
+                placeholder="Recipient Email"
+                value={form.to}
+                onChange={(e) => setForm({ ...form, to: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              />
+
+              <input
+                placeholder="Subject"
+                value={form.subject}
+                onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              />
+
+              <textarea
+                rows={5}
+                placeholder="Email Message"
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              />
+            </div>
+          )}
+
+          {type === "WAIT" && (
+            <input
+              type="number"
+              placeholder="Seconds"
+              value={form.seconds}
+              onChange={(e) => setForm({ ...form, seconds: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 p-3"
+            />
+          )}
+
+          {type === "HTTP_REQUEST" && (
+            <div className="space-y-4">
+              <select
+                value={form.method}
+                onChange={(e) => setForm({ ...form, method: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              >
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>DELETE</option>
+              </select>
+
+              <input
+                placeholder="API URL"
+                value={form.url}
+                onChange={(e) => setForm({ ...form, url: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3"
+              />
+
+              <textarea
+                rows={6}
+                placeholder='{"name":"John"}'
+                value={form.body}
+                onChange={(e) => setForm({ ...form, body: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 p-3 font-mono"
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 flex justify-end gap-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-300 px-6 py-3 font-semibold"
           >
             Cancel
           </button>
 
-          <button className="bg-blue-600 text-white px-5 py-2 rounded">
+          <button className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700">
+            <Save size={18} />
             Save Step
           </button>
         </div>
-      </form>
+      </motion.form>
     </div>
   );
 }

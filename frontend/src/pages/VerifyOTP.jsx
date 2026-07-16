@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { ShieldCheck, ArrowRight, RotateCcw } from "lucide-react";
 
 import { verifyOTP, resendOTP } from "../services/auth";
 
@@ -25,7 +27,7 @@ export default function VerifyOTP() {
     e.preventDefault();
 
     if (!otp.trim()) {
-      toast.error("Please enter the verification code.");
+      toast.error("Enter verification code");
       return;
     }
 
@@ -40,147 +42,85 @@ export default function VerifyOTP() {
       localStorage.setItem("access", data.access);
       localStorage.setItem("refresh", data.refresh);
 
-      toast.success("🎉 Email verified successfully!");
+      toast.success("Email verified!");
 
       navigate("/dashboard");
     } catch (err) {
-      toast.error(
-        err.response?.data?.message ||
-          "Invalid or expired OTP."
-      );
+      toast.error(err.response?.data?.message || "Invalid OTP");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResendOTP = async () => {
+  const resend = async () => {
     try {
       setResending(true);
 
       await resendOTP(email);
 
-      toast.success("Verification code sent again.");
-    } catch (err) {
-      toast.error(
-        err.response?.data?.message ||
-          "Unable to resend OTP."
-      );
+      toast.success("OTP Sent");
     } finally {
       setResending(false);
     }
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 450,
-        margin: "80px auto",
-        background: "#fff",
-        padding: 35,
-        borderRadius: 15,
-        boxShadow: "0 10px 25px rgba(0,0,0,.08)",
-      }}
-    >
-      <h1
-        style={{
-          textAlign: "center",
-          marginBottom: 10,
-        }}
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950">
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 w-full max-w-md px-5"
       >
-        Verify Email
-      </h1>
+        <div className="rounded-3xl border border-white/10 bg-white/10 p-8 backdrop-blur-2xl shadow-2xl">
+          <div className="text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600">
+              <ShieldCheck className="text-white" />
+            </div>
 
-      <p
-        style={{
-          textAlign: "center",
-          color: "#666",
-          marginBottom: 30,
-        }}
-      >
-        We've sent a verification code to
-        <br />
-        <b>{email}</b>
-      </p>
+            <h1 className="text-3xl font-bold text-white">Verify Email</h1>
 
-      <form onSubmit={submit}>
-        <input
-          value={otp}
-          disabled={loading || resending}
-          onChange={(e) => setOTP(e.target.value)}
-          placeholder="Enter 6-digit OTP"
-          maxLength={6}
-          style={{
-            width: "100%",
-            padding: 15,
-            fontSize: 22,
-            letterSpacing: 10,
-            textAlign: "center",
-            borderRadius: 8,
-            border: "1px solid #ccc",
-            boxSizing: "border-box",
-            marginBottom: 20,
-          }}
-        />
+            <p className="mt-3 text-slate-300">Verification code sent to</p>
 
-        <button
-          type="submit"
-          disabled={loading || resending}
-          style={{
-            width: "100%",
-            padding: 14,
-            background:
-              loading || resending
-                ? "#94a3b8"
-                : "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            cursor:
-              loading || resending
-                ? "not-allowed"
-                : "pointer",
-            fontSize: 16,
-            fontWeight: 600,
-          }}
-        >
-          {loading ? "⏳ Verifying..." : "Verify Email"}
-        </button>
-      </form>
+            <p className="font-semibold text-blue-300">{email}</p>
+          </div>
 
-      <div
-        style={{
-          marginTop: 25,
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            color: "#666",
-            marginBottom: 10,
-          }}
-        >
-          Didn't receive the code?
-        </p>
+          <form onSubmit={submit} className="mt-8 space-y-5">
+            <input
+              value={otp}
+              maxLength={6}
+              onChange={(e) => setOTP(e.target.value)}
+              className="w-full rounded-xl border border-white/20 bg-white/10 py-4 text-center text-3xl tracking-[12px] text-white outline-none focus:border-blue-500"
+              placeholder="000000"
+            />
 
-        <button
-          type="button"
-          disabled={loading || resending}
-          onClick={handleResendOTP}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#2563eb",
-            cursor:
-              loading || resending
-                ? "not-allowed"
-                : "pointer",
-            fontWeight: 600,
-            fontSize: 15,
-          }}
-        >
-          {resending ? "Sending..." : "Resend OTP"}
-        </button>
-      </div>
+            <button
+              disabled={loading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700"
+            >
+              {loading ? (
+                "Verifying..."
+              ) : (
+                <>
+                  Verify
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <button
+            onClick={resend}
+            disabled={resending}
+            className="mt-6 flex w-full items-center justify-center gap-2 text-blue-300 hover:text-white"
+          >
+            <RotateCcw size={16} />
+
+            {resending ? "Sending..." : "Resend OTP"}
+          </button>
+        </div>
+      </motion.div>
     </div>
   );
 }
