@@ -2,8 +2,10 @@ import requests
 
 
 class HttpExecutor:
+
     @staticmethod
     def execute(step):
+
         config = step.configuration
 
         response = requests.request(
@@ -13,4 +15,9 @@ class HttpExecutor:
             timeout=30,
         )
 
-        print(response.status_code)
+        if response.status_code >= 400:
+            raise Exception(
+                f"HTTP {response.status_code}"
+            )
+
+        return response.status_code

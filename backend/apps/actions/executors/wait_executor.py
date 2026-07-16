@@ -2,10 +2,14 @@ import time
 
 
 class WaitExecutor:
+
     @staticmethod
     def execute(step):
+
         config = step.configuration
 
-        time.sleep(
-            config.get("seconds", 5)
-        )
+        seconds = config.get("seconds", 5)
+
+        time.sleep(seconds)
+
+        return seconds
