@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Activity, CheckCircle2, Clock3, XCircle, Eye } from "lucide-react";
@@ -6,23 +6,60 @@ import { Activity, CheckCircle2, Clock3, XCircle, Eye } from "lucide-react";
 import { getExecutions } from "../services/execution";
 import Loader from "../components/Loader";
 
+const TERMINAL_STATUSES = ["SUCCESS", "FAILED"];
+
+const isExecutionRunning = (status) =>
+  status && !TERMINAL_STATUSES.includes(status);
+
 export default function Executions() {
   const navigate = useNavigate();
 
   const [executions, setExecutions] = useState(null);
 
-  useEffect(() => {
-    loadExecutions();
-  }, []);
-
-  const loadExecutions = async () => {
+  const loadExecutions = useCallback(async () => {
     try {
       const data = await getExecutions();
-      setExecutions(data);
+      setExecutions(data || []);
+      return data || [];
     } catch (err) {
       console.error(err);
+      return null;
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadExecutions();
+  }, [loadExecutions]);
+
+  const hasRunningExecutions = useMemo(
+    () => executions?.some((execution) => isExecutionRunning(execution.status)),
+    [executions],
+  );
+
+  useEffect(() => {
+    if (!hasRunningExecutions) return undefined;
+
+    let stopped = false;
+    let timeoutId;
+
+    const pollExecutions = async () => {
+      const data = await loadExecutions();
+      const stillRunning = data?.some((execution) =>
+        isExecutionRunning(execution.status),
+      );
+
+      if (!stopped && stillRunning) {
+        timeoutId = setTimeout(pollExecutions, 1000);
+      }
+    };
+
+    timeoutId = setTimeout(pollExecutions, 1000);
+
+    return () => {
+      stopped = true;
+      clearTimeout(timeoutId);
+    };
+  }, [hasRunningExecutions, loadExecutions]);
 
   if (!executions) return <Loader />;
 
@@ -30,9 +67,7 @@ export default function Executions() {
 
   const failed = executions.filter((e) => e.status === "FAILED").length;
 
-  const running = executions.filter(
-    (e) => e.status !== "SUCCESS" && e.status !== "FAILED",
-  ).length;
+  const running = executions.filter((e) => isExecutionRunning(e.status)).length;
 
   return (
     <motion.div
@@ -92,6 +127,7 @@ export default function Executions() {
         {executions.map((execution, index) => (
           <motion.div
             key={execution.id}
+            layout
             initial={{
               opacity: 0,
               y: 25,
@@ -131,17 +167,20 @@ export default function Executions() {
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
-                <span
+                <motion.span
+                  key={`${execution.id}-${execution.status}`}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   className={`rounded-full px-4 py-2 text-sm font-semibold ${
                     execution.status === "SUCCESS"
                       ? "bg-green-100 text-green-700"
                       : execution.status === "FAILED"
                         ? "bg-red-100 text-red-700"
-                        : "bg-yellow-100 text-yellow-700"
+                      : "bg-yellow-100 text-yellow-700"
                   }`}
                 >
                   {execution.status}
-                </span>
+                </motion.span>
 
                 <button
                   onClick={() => navigate(`/executions/${execution.id}`)}

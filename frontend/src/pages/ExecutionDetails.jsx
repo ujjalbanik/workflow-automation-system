@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -8,29 +8,140 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
 } from "lucide-react";
 
+import ExecutionTimeline from "../components/ExecutionTimeline";
 import Loader from "../components/Loader";
+import { getWorkflowSteps } from "../services/workflow";
 import { getExecution } from "../services/execution";
+
+const TERMINAL_STATUSES = ["SUCCESS", "FAILED"];
+
+const isExecutionRunning = (status) =>
+  status && !TERMINAL_STATUSES.includes(status);
 
 export default function ExecutionDetails() {
   const { id } = useParams();
 
   const [execution, setExecution] = useState(null);
+  const [workflowSteps, setWorkflowSteps] = useState([]);
 
-  useEffect(() => {
-    loadExecution();
-  }, [id]);
-
-  const loadExecution = async () => {
+  const loadExecution = useCallback(async () => {
     try {
       const data = await getExecution(id);
       setExecution(data);
+      return data;
     } catch (err) {
       console.error(err);
+      return null;
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadExecution();
+  }, [loadExecution]);
+
+  useEffect(() => {
+    if (!isExecutionRunning(execution?.status)) return undefined;
+
+    let stopped = false;
+    let timeoutId;
+
+    const pollExecution = async () => {
+      const data = await loadExecution();
+
+      if (!stopped && isExecutionRunning(data?.status)) {
+        timeoutId = setTimeout(pollExecution, 1000);
+      }
+    };
+
+    timeoutId = setTimeout(pollExecution, 1000);
+
+    return () => {
+      stopped = true;
+      clearTimeout(timeoutId);
+    };
+  }, [execution?.status, loadExecution]);
+
+  useEffect(() => {
+    if (!execution?.workflow) return undefined;
+
+    let active = true;
+
+    const loadWorkflowSteps = async () => {
+      try {
+        const data = await getWorkflowSteps(execution.workflow);
+
+        if (active) {
+          setWorkflowSteps(data || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadWorkflowSteps();
+
+    return () => {
+      active = false;
+    };
+  }, [execution?.workflow]);
+
+  const logs = execution?.logs || [];
+  const running = isExecutionRunning(execution?.status);
+  const totalSteps = workflowSteps.length || logs.length;
+  const completedLogs = logs.filter((log) =>
+    TERMINAL_STATUSES.includes(log.status),
+  ).length;
+
+  const progress =
+    execution?.status === "SUCCESS"
+      ? 100
+      : totalSteps
+        ? Math.min(100, Math.round((completedLogs / totalSteps) * 100))
+        : running
+          ? 8
+          : 100;
+
+  const activeStepIndex = useMemo(() => {
+    const runningLogIndex = logs.findIndex((log) => log.status === "RUNNING");
+
+    if (runningLogIndex !== -1) return runningLogIndex;
+
+    if (!running || !workflowSteps.length) return -1;
+
+    return Math.min(completedLogs, workflowSteps.length - 1);
+  }, [completedLogs, logs, running, workflowSteps.length]);
+
+  const timelineItems = useMemo(() => {
+    if (workflowSteps.length) {
+      return workflowSteps.map((step, index) => {
+        const log = logs[index];
+        const active = index === activeStepIndex;
+
+        return {
+          id: step.id,
+          step_name: step.name,
+          step_type: step.step_type,
+          started_at: log?.started_at,
+          finished_at: log?.finished_at,
+          message:
+            log?.message ||
+            (active
+              ? "This step is currently being processed."
+              : "Waiting for execution."),
+          status: log?.status || (active ? "RUNNING" : "PENDING"),
+          active,
+        };
+      });
+    }
+
+    return logs.map((log, index) => ({
+      id: `${log.step_name}-${index}`,
+      ...log,
+      active: index === activeStepIndex,
+    }));
+  }, [activeStepIndex, logs, workflowSteps]);
 
   if (!execution) return <Loader />;
 
@@ -40,6 +151,13 @@ export default function ExecutionDetails() {
       : execution.status === "FAILED"
         ? "bg-red-100 text-red-700"
         : "bg-blue-100 text-blue-700";
+
+  const progressColor =
+    execution.status === "SUCCESS"
+      ? "bg-green-500"
+      : execution.status === "FAILED"
+        ? "bg-red-500"
+        : "bg-blue-500";
 
   return (
     <motion.div
@@ -77,9 +195,50 @@ export default function ExecutionDetails() {
             </div>
           </div>
 
-          <span className={`rounded-full px-5 py-3 text-sm font-bold ${badge}`}>
+          <motion.span
+            key={execution.status}
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className={`rounded-full px-5 py-3 text-sm font-bold ${badge}`}
+          >
             {execution.status}
-          </span>
+          </motion.span>
+        </div>
+      </div>
+
+      <div className="rounded-3xl bg-white p-6 shadow-lg">
+        <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-semibold text-slate-500">
+              Execution Progress
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold text-slate-800">
+              {progress}%
+            </h2>
+          </div>
+
+          <motion.span
+            key={`progress-${execution.status}`}
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`w-fit rounded-full px-4 py-2 text-sm font-semibold ${badge}`}
+          >
+            {running
+              ? "Live Updating"
+              : execution.status === "FAILED"
+                ? "Execution Failed"
+                : "Execution Complete"}
+          </motion.span>
+        </div>
+
+        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+          <motion.div
+            initial={false}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className={`h-full rounded-full ${progressColor}`}
+          />
         </div>
       </div>
 
@@ -131,89 +290,7 @@ export default function ExecutionDetails() {
 
       {/* Timeline */}
 
-      <div className="rounded-3xl bg-white p-8 shadow-xl">
-        <h2 className="mb-8 text-2xl font-bold text-slate-800">
-          Execution Timeline
-        </h2>
-
-        {execution.logs?.length ? (
-          <div className="relative">
-            <div className="absolute left-5 top-0 h-full w-1 rounded-full bg-slate-200" />
-
-            <div className="space-y-8">
-              {execution.logs.map((log, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.08 }}
-                  className="relative ml-2"
-                >
-                  <div
-                    className={`absolute left-0 flex h-10 w-10 items-center justify-center rounded-full ${
-                      log.status === "SUCCESS"
-                        ? "bg-green-600"
-                        : log.status === "FAILED"
-                          ? "bg-red-600"
-                          : "bg-blue-600"
-                    } text-white shadow-lg`}
-                  >
-                    {log.status === "SUCCESS" ? (
-                      <CheckCircle2 size={18} />
-                    ) : log.status === "FAILED" ? (
-                      <XCircle size={18} />
-                    ) : (
-                      <Activity size={18} />
-                    )}
-                  </div>
-
-                  <div className="ml-16 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-800">
-                          {log.step_name}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-blue-600">
-                          {log.step_type}
-                        </p>
-                      </div>
-
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                          log.status === "SUCCESS"
-                            ? "bg-green-100 text-green-700"
-                            : log.status === "FAILED"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-blue-100 text-blue-700"
-                        }`}
-                      >
-                        {log.status}
-                      </span>
-                    </div>
-
-                    <p className="mt-5 leading-7 text-slate-600">
-                      {log.message}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border-2 border-dashed border-slate-300 p-16 text-center">
-            <Activity size={56} className="mx-auto mb-5 text-slate-400" />
-
-            <h3 className="text-2xl font-bold text-slate-700">
-              No Execution Logs
-            </h3>
-
-            <p className="mt-2 text-slate-500">
-              This execution doesn't have any logs yet.
-            </p>
-          </div>
-        )}
-      </div>
+      <ExecutionTimeline events={timelineItems} />
     </motion.div>
   );
 }
