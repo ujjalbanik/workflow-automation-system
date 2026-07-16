@@ -9,14 +9,17 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle2,
+  CircleDot,
   Copy,
   Download,
   FileJson,
   Hash,
   ListChecks,
+  PlayCircle,
   User,
 } from "lucide-react";
 
+import CollapsibleSection from "../components/CollapsibleSection";
 import ExecutionTimeline from "../components/ExecutionTimeline";
 import Loader from "../components/Loader";
 import { getWorkflowSteps } from "../services/workflow";
@@ -25,6 +28,31 @@ import { getExecution } from "../services/execution";
 const TERMINAL_STATUSES = ["SUCCESS", "FAILED"];
 
 const isExecutionRunning = (status) => status === "RUNNING";
+
+const statusConfig = {
+  SUCCESS: {
+    badge: "bg-green-100 text-green-700 ring-green-200",
+    accent: "text-green-600",
+    label: "Successful",
+  },
+  FAILED: {
+    badge: "bg-red-100 text-red-700 ring-red-200",
+    accent: "text-red-600",
+    label: "Failed",
+  },
+  RUNNING: {
+    badge: "bg-blue-100 text-blue-700 ring-blue-200",
+    accent: "text-blue-600",
+    label: "Running",
+  },
+  PENDING: {
+    badge: "bg-slate-100 text-slate-700 ring-slate-200",
+    accent: "text-slate-600",
+    label: "Pending",
+  },
+};
+
+const getStatusConfig = (status) => statusConfig[status] || statusConfig.PENDING;
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -54,6 +82,28 @@ const formatRuntime = (execution) => {
 
   return `${minutes}m ${remainder}s`;
 };
+
+const highlightJson = (json) =>
+  json
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+      (match) => {
+        let className = "text-cyan-300";
+
+        if (/^"/.test(match)) {
+          className = /:$/.test(match) ? "text-blue-300" : "text-emerald-300";
+        } else if (/true|false/.test(match)) {
+          className = "text-violet-300";
+        } else if (/null/.test(match)) {
+          className = "text-slate-400";
+        }
+
+        return `<span class="${className}">${match}</span>`;
+      },
+    );
 
 export default function ExecutionDetails() {
   const { id } = useParams();
@@ -181,26 +231,22 @@ export default function ExecutionDetails() {
 
   if (!execution) return <Loader />;
 
-  const badge =
-    execution.status === "SUCCESS"
-      ? "bg-green-100 text-green-700"
-      : execution.status === "FAILED"
-        ? "bg-red-100 text-red-700"
-        : "bg-blue-100 text-blue-700";
-
+  const currentStatus = getStatusConfig(execution.status);
+  const badge = currentStatus.badge;
   const runtime = formatRuntime(execution);
   const executionJson = JSON.stringify(execution, null, 2);
+  const highlightedExecutionJson = highlightJson(executionJson);
   const statusBadges = [
-    { label: execution.status, className: badge },
+    { label: currentStatus.label, className: badge },
     {
       label: running ? "Live" : "Final",
       className: running
-        ? "bg-blue-100 text-blue-700"
-        : "bg-slate-100 text-slate-700",
+        ? "bg-blue-100 text-blue-700 ring-blue-200"
+        : "bg-slate-100 text-slate-700 ring-slate-200",
     },
     {
       label: `${completedLogs}/${totalSteps || logs.length} Steps`,
-      className: "bg-indigo-100 text-indigo-700",
+      className: "bg-indigo-100 text-indigo-700 ring-indigo-200",
     },
   ];
 
@@ -285,7 +331,7 @@ export default function ExecutionDetails() {
             key={execution.status}
             initial={{ opacity: 0, y: -8, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            className={`rounded-full px-5 py-3 text-sm font-bold ${badge}`}
+            className={`rounded-full px-5 py-3 text-sm font-bold ring-1 ${badge}`}
           >
             {execution.status}
           </motion.span>
@@ -309,7 +355,7 @@ export default function ExecutionDetails() {
                   key={item.label}
                   initial={{ opacity: 0, scale: 0.94 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${item.className}`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ring-1 ${item.className}`}
                 >
                   {item.label}
                 </motion.span>
@@ -359,6 +405,27 @@ export default function ExecutionDetails() {
             label="Logs"
             value={`${logs.length} Events`}
           />
+          <MetadataItem
+            icon={<CircleDot size={18} />}
+            label="Status"
+            value={execution.status}
+            accent={currentStatus.accent}
+          />
+          <MetadataItem
+            icon={<Calendar size={18} />}
+            label="Start Time"
+            value={formatDateTime(execution.started_at)}
+          />
+          <MetadataItem
+            icon={<Clock3 size={18} />}
+            label="End Time"
+            value={formatDateTime(execution.finished_at)}
+          />
+          <MetadataItem
+            icon={<PlayCircle size={18} />}
+            label="Duration"
+            value={runtime}
+          />
         </div>
       </div>
 
@@ -378,7 +445,7 @@ export default function ExecutionDetails() {
             key={`progress-${execution.status}`}
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`w-fit rounded-full px-4 py-2 text-sm font-semibold ${badge}`}
+            className={`w-fit rounded-full px-4 py-2 text-sm font-semibold ring-1 ${badge}`}
           >
             {running
               ? "Live Updating"
@@ -442,26 +509,20 @@ export default function ExecutionDetails() {
 
       {/* Timeline */}
 
-      <ExecutionTimeline events={timelineItems} />
+      <CollapsibleSection
+        title="Formatted Logs"
+        description="Step-level execution events from the current API response."
+        icon={<ListChecks size={24} />}
+      >
+        <ExecutionTimeline events={timelineItems} framed={false} />
+      </CollapsibleSection>
 
-      <div className="rounded-3xl bg-white p-6 shadow-xl">
-        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-              <FileJson size={24} />
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">
-                JSON Payload
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Raw execution response used by this page.
-              </p>
-            </div>
-          </div>
-
+      <CollapsibleSection
+        title="JSON Payload"
+        description="Raw execution response used by this page."
+        icon={<FileJson size={24} />}
+        defaultOpen={false}
+        actions={
           <button
             type="button"
             onClick={copyExecutionJson}
@@ -470,20 +531,21 @@ export default function ExecutionDetails() {
             <Copy size={18} />
             Copy JSON
           </button>
-        </div>
-
+        }
+      >
         <pre className="max-h-[460px] overflow-auto rounded-2xl bg-slate-950 p-5 text-sm leading-7 text-slate-100">
-          <code>{executionJson}</code>
+          <code dangerouslySetInnerHTML={{ __html: highlightedExecutionJson }} />
         </pre>
-      </div>
+      </CollapsibleSection>
+
     </motion.div>
   );
 }
 
-function MetadataItem({ icon, label, value }) {
+function MetadataItem({ icon, label, value, accent = "text-blue-600" }) {
   return (
     <div className="rounded-2xl bg-slate-50 p-4">
-      <div className="mb-3 flex items-center gap-2 text-blue-600">{icon}</div>
+      <div className={`mb-3 flex items-center gap-2 ${accent}`}>{icon}</div>
 
       <p className="text-sm text-slate-500">{label}</p>
 

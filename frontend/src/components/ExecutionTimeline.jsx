@@ -40,16 +40,12 @@ const formatTimestamp = (event) => {
   return new Date(timestamp).toLocaleString();
 };
 
-export default function ExecutionTimeline({ events = [] }) {
-  return (
-    <div className="rounded-3xl bg-white p-8 shadow-xl">
-      <h2 className="mb-8 text-2xl font-bold text-slate-800">
-        Execution Timeline
-      </h2>
-
+export default function ExecutionTimeline({ events = [], framed = true }) {
+  const content = (
+    <>
       {events.length ? (
         <div className="relative">
-          <div className="absolute left-5 top-0 h-full w-1 rounded-full bg-slate-200" />
+          <div className="absolute left-4 top-0 h-full w-1 rounded-full bg-slate-200 sm:left-5" />
 
           <div className="space-y-8">
             <AnimatePresence initial={false}>
@@ -65,23 +61,26 @@ export default function ExecutionTimeline({ events = [] }) {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
                     transition={{ delay: index * 0.06 }}
-                    className="relative ml-2"
+                    className="relative"
                   >
-                    <div
-                      className={`absolute left-0 flex h-10 w-10 items-center justify-center rounded-full ${style.dot} text-white shadow-lg`}
+                    <motion.div
+                      key={`${event.id || index}-${event.status}-icon`}
+                      initial={{ scale: 0.88 }}
+                      animate={{ scale: 1 }}
+                      className={`absolute left-0 flex h-9 w-9 items-center justify-center rounded-full ${style.dot} text-white shadow-lg sm:h-10 sm:w-10`}
                     >
                       <StatusIcon size={18} />
-                    </div>
+                    </motion.div>
 
                     <motion.div
                       animate={{
                         borderColor: event.active ? "#60a5fa" : "#e2e8f0",
                         backgroundColor: event.active ? "#eff6ff" : "#f8fafc",
                       }}
-                      className="ml-16 rounded-2xl border p-6"
+                      className="ml-12 rounded-2xl border p-4 sm:ml-16 sm:p-6"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
+                        <div className="min-w-0">
                           <h3 className="text-lg font-bold text-slate-800">
                             {event.step_name}
                           </h3>
@@ -91,11 +90,14 @@ export default function ExecutionTimeline({ events = [] }) {
                           </p>
                         </div>
 
-                        <span
+                        <motion.span
+                          key={`${event.id || index}-${event.status}-badge`}
+                          initial={{ opacity: 0, scale: 0.92 }}
+                          animate={{ opacity: 1, scale: 1 }}
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${style.badge}`}
                         >
                           {event.status}
-                        </span>
+                        </motion.span>
                       </div>
 
                       <div className="mt-5 grid gap-3 text-sm text-slate-500 sm:grid-cols-2">
@@ -103,14 +105,18 @@ export default function ExecutionTimeline({ events = [] }) {
                           <p className="font-semibold text-slate-700">
                             Started
                           </p>
-                          <p className="mt-1">{formatDateTime(event.started_at)}</p>
+                          <p className="mt-1 break-words">
+                            {formatDateTime(event.started_at)}
+                          </p>
                         </div>
 
                         <div className="rounded-xl bg-white p-3">
                           <p className="font-semibold text-slate-700">
                             Finished
                           </p>
-                          <p className="mt-1">{formatDateTime(event.finished_at)}</p>
+                          <p className="mt-1 break-words">
+                            {formatDateTime(event.finished_at)}
+                          </p>
                         </div>
                       </div>
 
@@ -147,6 +153,18 @@ export default function ExecutionTimeline({ events = [] }) {
           </p>
         </div>
       )}
+    </>
+  );
+
+  if (!framed) return content;
+
+  return (
+    <div className="rounded-3xl bg-white p-5 shadow-xl sm:p-8">
+      <h2 className="mb-8 text-2xl font-bold text-slate-800">
+        Execution Timeline
+      </h2>
+
+      {content}
     </div>
   );
 }
