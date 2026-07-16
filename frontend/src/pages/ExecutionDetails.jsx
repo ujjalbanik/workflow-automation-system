@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Activity,
@@ -8,6 +9,12 @@ import {
   Calendar,
   AlertTriangle,
   CheckCircle2,
+  Copy,
+  Download,
+  FileJson,
+  Hash,
+  ListChecks,
+  User,
 } from "lucide-react";
 
 import ExecutionTimeline from "../components/ExecutionTimeline";
@@ -17,8 +24,36 @@ import { getExecution } from "../services/execution";
 
 const TERMINAL_STATUSES = ["SUCCESS", "FAILED"];
 
-const isExecutionRunning = (status) =>
-  status && !TERMINAL_STATUSES.includes(status);
+const isExecutionRunning = (status) => status === "RUNNING";
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleString();
+};
+
+const formatRuntime = (execution) => {
+  if (!execution?.started_at) return "-";
+
+  if (execution.duration) return `${execution.duration} sec`;
+
+  const end = execution.finished_at
+    ? new Date(execution.finished_at)
+    : new Date();
+  const seconds = Math.max(
+    0,
+    Math.round(
+      (end.getTime() - new Date(execution.started_at).getTime()) / 1000,
+    ),
+  );
+
+  if (seconds < 60) return `${seconds} sec`;
+
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+
+  return `${minutes}m ${remainder}s`;
+};
 
 export default function ExecutionDetails() {
   const { id } = useParams();
@@ -125,6 +160,7 @@ export default function ExecutionDetails() {
           step_type: step.step_type,
           started_at: log?.started_at,
           finished_at: log?.finished_at,
+          raw: log,
           message:
             log?.message ||
             (active
@@ -152,12 +188,62 @@ export default function ExecutionDetails() {
         ? "bg-red-100 text-red-700"
         : "bg-blue-100 text-blue-700";
 
+  const runtime = formatRuntime(execution);
+  const executionJson = JSON.stringify(execution, null, 2);
+  const statusBadges = [
+    { label: execution.status, className: badge },
+    {
+      label: running ? "Live" : "Final",
+      className: running
+        ? "bg-blue-100 text-blue-700"
+        : "bg-slate-100 text-slate-700",
+    },
+    {
+      label: `${completedLogs}/${totalSteps || logs.length} Steps`,
+      className: "bg-indigo-100 text-indigo-700",
+    },
+  ];
+
   const progressColor =
     execution.status === "SUCCESS"
       ? "bg-green-500"
       : execution.status === "FAILED"
         ? "bg-red-500"
         : "bg-blue-500";
+
+  const copyExecutionJson = async () => {
+    try {
+      await navigator.clipboard.writeText(executionJson);
+      toast.success("Execution JSON copied");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to copy JSON");
+    }
+  };
+
+  const downloadLogs = () => {
+    const payload = {
+      execution_id: execution.id,
+      workflow: execution.workflow_name || execution.workflow,
+      status: execution.status,
+      runtime,
+      exported_at: new Date().toISOString(),
+      logs,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `execution-${String(execution.id).slice(0, 8)}-logs.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
 
   return (
     <motion.div
@@ -207,6 +293,76 @@ export default function ExecutionDetails() {
       </div>
 
       <div className="rounded-3xl bg-white p-6 shadow-lg">
+        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+          <div>
+            <p className="text-sm font-semibold text-slate-500">
+              Execution Metadata
+            </p>
+
+            <h2 className="mt-1 text-2xl font-bold text-slate-800">
+              {execution.workflow_name || "Workflow Run"}
+            </h2>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {statusBadges.map((item) => (
+                <motion.span
+                  key={item.label}
+                  initial={{ opacity: 0, scale: 0.94 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${item.className}`}
+                >
+                  {item.label}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={copyExecutionJson}
+              className="flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Copy size={18} />
+              Copy JSON
+            </button>
+
+            <button
+              type="button"
+              onClick={downloadLogs}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+            >
+              <Download size={18} />
+              Download Logs
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <MetadataItem
+            icon={<Hash size={18} />}
+            label="Execution ID"
+            value={execution.id}
+          />
+          <MetadataItem
+            icon={<Activity size={18} />}
+            label="Workflow"
+            value={execution.workflow}
+          />
+          <MetadataItem
+            icon={<User size={18} />}
+            label="Started By"
+            value={execution.started_by}
+          />
+          <MetadataItem
+            icon={<ListChecks size={18} />}
+            label="Logs"
+            value={`${logs.length} Events`}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-3xl bg-white p-6 shadow-lg">
         <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-semibold text-slate-500">
@@ -248,23 +404,19 @@ export default function ExecutionDetails() {
         <InfoCard
           icon={<Calendar className="text-blue-600" size={24} />}
           title="Started"
-          value={new Date(execution.started_at).toLocaleString()}
+          value={formatDateTime(execution.started_at)}
         />
 
         <InfoCard
           icon={<Clock3 className="text-orange-500" size={24} />}
           title="Finished"
-          value={
-            execution.finished_at
-              ? new Date(execution.finished_at).toLocaleString()
-              : "-"
-          }
+          value={formatDateTime(execution.finished_at)}
         />
 
         <InfoCard
           icon={<Activity className="text-green-600" size={24} />}
-          title="Duration"
-          value={execution.duration ? `${execution.duration} sec` : "-"}
+          title="Runtime"
+          value={runtime}
         />
 
         <InfoCard
@@ -291,7 +443,54 @@ export default function ExecutionDetails() {
       {/* Timeline */}
 
       <ExecutionTimeline events={timelineItems} />
+
+      <div className="rounded-3xl bg-white p-6 shadow-xl">
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+              <FileJson size={24} />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">
+                JSON Payload
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Raw execution response used by this page.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={copyExecutionJson}
+            className="flex w-fit items-center gap-2 rounded-xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <Copy size={18} />
+            Copy JSON
+          </button>
+        </div>
+
+        <pre className="max-h-[460px] overflow-auto rounded-2xl bg-slate-950 p-5 text-sm leading-7 text-slate-100">
+          <code>{executionJson}</code>
+        </pre>
+      </div>
     </motion.div>
+  );
+}
+
+function MetadataItem({ icon, label, value }) {
+  return (
+    <div className="rounded-2xl bg-slate-50 p-4">
+      <div className="mb-3 flex items-center gap-2 text-blue-600">{icon}</div>
+
+      <p className="text-sm text-slate-500">{label}</p>
+
+      <p className="mt-2 break-all font-semibold text-slate-800">
+        {value || "-"}
+      </p>
+    </div>
   );
 }
 

@@ -6,10 +6,7 @@ import { Activity, CheckCircle2, Clock3, XCircle, Eye } from "lucide-react";
 import { getExecutions } from "../services/execution";
 import Loader from "../components/Loader";
 
-const TERMINAL_STATUSES = ["SUCCESS", "FAILED"];
-
-const isExecutionRunning = (status) =>
-  status && !TERMINAL_STATUSES.includes(status);
+const isExecutionRunning = (status) => status === "RUNNING";
 
 export default function Executions() {
   const navigate = useNavigate();

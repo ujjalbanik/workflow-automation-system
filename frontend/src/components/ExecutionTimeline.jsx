@@ -26,6 +26,12 @@ const statusStyles = {
 
 const getStatusStyle = (status) => statusStyles[status] || statusStyles.PENDING;
 
+const formatDateTime = (timestamp) => {
+  if (!timestamp) return "-";
+
+  return new Date(timestamp).toLocaleString();
+};
+
 const formatTimestamp = (event) => {
   const timestamp = event.finished_at || event.started_at;
 
@@ -83,10 +89,6 @@ export default function ExecutionTimeline({ events = [] }) {
                           <p className="mt-1 text-sm text-blue-600">
                             {event.step_type}
                           </p>
-
-                          <p className="mt-2 text-sm text-slate-500">
-                            {formatTimestamp(event)}
-                          </p>
                         </div>
 
                         <span
@@ -96,8 +98,34 @@ export default function ExecutionTimeline({ events = [] }) {
                         </span>
                       </div>
 
-                      <p className="mt-5 leading-7 text-slate-600">
-                        {event.message}
+                      <div className="mt-5 grid gap-3 text-sm text-slate-500 sm:grid-cols-2">
+                        <div className="rounded-xl bg-white p-3">
+                          <p className="font-semibold text-slate-700">
+                            Started
+                          </p>
+                          <p className="mt-1">{formatDateTime(event.started_at)}</p>
+                        </div>
+
+                        <div className="rounded-xl bg-white p-3">
+                          <p className="font-semibold text-slate-700">
+                            Finished
+                          </p>
+                          <p className="mt-1">{formatDateTime(event.finished_at)}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="mb-2 text-xs font-semibold uppercase text-slate-400">
+                          Log Message
+                        </p>
+
+                        <p className="leading-7 text-slate-600">
+                          {event.message || "No log message available."}
+                        </p>
+                      </div>
+
+                      <p className="mt-3 text-xs font-semibold text-slate-400">
+                        Latest update: {formatTimestamp(event)}
                       </p>
                     </motion.div>
                   </motion.div>
