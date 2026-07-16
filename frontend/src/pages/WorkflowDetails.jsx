@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import AddStepModal from "../components/AddStepModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 
 import {
   getWorkflow,
@@ -30,6 +31,7 @@ export default function WorkflowDetails() {
   const [workflow, setWorkflow] = useState(null);
   const [steps, setSteps] = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   useEffect(() => {
     load();
@@ -49,9 +51,13 @@ export default function WorkflowDetails() {
   };
 
   const removeWorkflow = async () => {
-    if (!window.confirm("Delete this workflow?")) return;
+    setConfirmDelete({ type: "workflow" });
+  };
 
+  const confirmRemoveWorkflow = async () => {
     await deleteWorkflow(id);
+
+    setConfirmDelete(null);
 
     toast.success("Workflow deleted");
 
@@ -59,13 +65,39 @@ export default function WorkflowDetails() {
   };
 
   const removeStep = async (stepId) => {
-    if (!window.confirm("Delete this step?")) return;
+    setConfirmDelete({ type: "step", stepId });
+  };
 
-    await deleteWorkflowStep(id, stepId);
+  const confirmRemoveStep = async () => {
+    if (!confirmDelete?.stepId) return;
+
+    await deleteWorkflowStep(id, confirmDelete.stepId);
+
+    setConfirmDelete(null);
 
     toast.success("Step deleted");
 
     load();
+  };
+
+  const confirmDeleteTitle =
+    confirmDelete?.type === "step" ? "Delete step?" : "Delete workflow?";
+
+  const confirmDeleteMessage =
+    confirmDelete?.type === "step"
+      ? "This workflow step will be permanently removed from the automation sequence."
+      : "This workflow will be permanently deleted, including its configured automation steps.";
+
+  const confirmDeleteLabel =
+    confirmDelete?.type === "step" ? "Delete Step" : "Delete Workflow";
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete?.type === "step") {
+      confirmRemoveStep();
+      return;
+    }
+
+    confirmRemoveWorkflow();
   };
 
   if (!workflow) return <div>Loading...</div>;
@@ -278,6 +310,15 @@ export default function WorkflowDetails() {
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        title={confirmDeleteTitle}
+        message={confirmDeleteMessage}
+        confirmLabel={confirmDeleteLabel}
+        onClose={() => setConfirmDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

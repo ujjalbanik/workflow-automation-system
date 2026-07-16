@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 
 import { Search, Plus, Workflow } from "lucide-react";
 
+import ConfirmDialog from "../components/ConfirmDialog";
 import Loader from "../components/Loader";
 import {
   getWorkflows,
@@ -15,6 +16,7 @@ import {
 export default function Workflows() {
   const [workflows, setWorkflows] = useState(null);
   const [search, setSearch] = useState("");
+  const [workflowToDelete, setWorkflowToDelete] = useState(null);
 
   useEffect(() => {
     load();
@@ -42,11 +44,16 @@ export default function Workflows() {
   };
 
   const remove = async (id) => {
-    if (!window.confirm("Delete Workflow?")) return;
+    setWorkflowToDelete(id);
+  };
+
+  const confirmRemove = async () => {
+    if (!workflowToDelete) return;
 
     try {
-      await deleteWorkflow(id);
+      await deleteWorkflow(workflowToDelete);
       toast.success("Workflow deleted");
+      setWorkflowToDelete(null);
       load();
     } catch (error) {
       toast.error(
@@ -226,6 +233,15 @@ export default function Workflows() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(workflowToDelete)}
+        title="Delete workflow?"
+        message="This workflow will be permanently removed from your automation list."
+        confirmLabel="Delete Workflow"
+        onClose={() => setWorkflowToDelete(null)}
+        onConfirm={confirmRemove}
+      />
     </motion.div>
   );
 }
